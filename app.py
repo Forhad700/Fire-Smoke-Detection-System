@@ -27,22 +27,21 @@ elif source_mode == "Video":
     uploaded_video = st.file_uploader("Upload Video", type=['mp4', 'mov', 'avi'])
     
     if uploaded_video:
-        tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+        # 1. Save the uploaded file to a temporary location
+        tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(uploaded_video.read())
         
-        # We need a place to save the output video
-        output_path = "processed_video.mp4"
-        
-        if st.button("🚀 Run Full Analysis"):
+        if st.button("🚀 Start Analysis"):
             vf = cv2.VideoCapture(tfile.name)
             
-            # Get video properties to save correctly
+            # Get video properties
             width = int(vf.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(vf.get(cv2.CAP_PROP_FRAME_HEIGHT))
             fps = int(vf.get(cv2.CAP_PROP_FPS))
             
-            # Standard web-friendly codec
-            fourcc = cv2.VideoWriter_fourcc(*'avc1') 
+            # Using 'VP80' and '.webm' is the most compatible way for Streamlit Cloud
+            output_path = "output.webm"
+            fourcc = cv2.VideoWriter_fourcc(*'VP80')
             out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
             
             progress_bar = st.progress(0)
@@ -54,21 +53,24 @@ elif source_mode == "Video":
                 ret, frame = vf.read()
                 if not ret: break
                 
-                # Inference - Small imgsz is the only way to save time!
+                # Inference
                 results = model.predict(frame, conf=conf_threshold, imgsz=320, verbose=False)
-                
-                # Write the frame with the boxes drawn on it
                 out.write(results[0].plot())
                 
                 frame_count += 1
-                progress_bar.progress(frame_count / total_frames)
-                status_text.text(f"Processing: {frame_count}/{total_frames} frames...")
+                if frame_count % 10 == 0: # Update progress every 10 frames to save memory
+                    progress_bar.progress(frame_count / total_frames)
+                    status_text.text(f"Processing frame {frame_count}/{total_frames}...")
 
             vf.release()
             out.release()
             
-            st.success("Analysis Complete! Watch the smooth results below:")
-            st.video(output_path)
+            # 2. READ THE FILE BACK AS BYTES (This prevents the MediaFileStorageError)
+            with open(output_path, "rb") as f:
+                video_bytes = f.read()
+            
+            st.success("Analysis Complete!")
+            st.video(video_bytes) # Passing bytes is safer than passing a file path
 
 elif source_mode == "Webcam":
     st.info("Click 'Stop' at Top Right to Turn Off Camera.")
@@ -80,4 +82,5 @@ elif source_mode == "Webcam":
         results = model.predict(frame, conf=conf_threshold)
         st_frame.image(results[0].plot(), channels="BGR", use_container_width=True)
     cap.release()
+
 
