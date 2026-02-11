@@ -4,8 +4,7 @@ import cv2
 import PIL.Image
 import numpy as np
 import tempfile
-from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
-import av
+
 
 st.set_page_config(page_title="Fire Smoke Detector 🔥", layout="wide")
 st.title("🔥 Fire & Smoke Detection System")
@@ -13,11 +12,11 @@ st.title("🔥 Fire & Smoke Detection System")
 @st.cache_resource
 def load_model():
     return YOLO('best.pt')
-
 model = load_model()
 
 source_mode = st.sidebar.radio("Select Source:", ["Image", "Video", "Webcam"])
 conf_threshold = st.sidebar.slider("Confidence", 0.1, 1.0, 0.4)
+
 
 if source_mode == "Image":
     uploaded_file = st.file_uploader("Upload Image", type=['jpg', 'jpeg', 'png'])
@@ -25,6 +24,7 @@ if source_mode == "Image":
         img = PIL.Image.open(uploaded_file)
         results = model.predict(img, conf=conf_threshold)
         st.image(results[0].plot()[:,:,::-1], caption="Detection", use_container_width=True)
+
 
 elif source_mode == "Video":
     uploaded_video = st.file_uploader("Upload Video", type=['mp4', 'mov', 'avi'])
@@ -36,35 +36,23 @@ elif source_mode == "Video":
         while vf.isOpened():
             ret, frame = vf.read()
             if not ret: break
-            # Keep standard prediction for video to maintain your preferred quality
             results = model.predict(frame, conf=conf_threshold)
             st_frame.image(results[0].plot(), channels="BGR", use_container_width=True)
         vf.release()
 
+
 elif source_mode == "Webcam":
-    st.info("Ensure you are using HTTPS. Click START to begin.")
+    st.info("Take a photo to run the detection.")
+    # This opens your laptop camera automatically on the cloud
+    cam_image = st.camera_input("Detect Fire/Smoke from Webcam")
     
-    # RELIABILITY FIX: Multiple STUN servers help bypass strict network firewalls
-    RTC_CONFIGURATION = RTCConfiguration(
-        {"iceServers": [
-            {"urls": ["stun:stun.l.google.com:19302"]},
-            {"urls": ["stun:stun1.l.google.com:19302"]},
-            {"urls": ["stun:stun2.l.google.com:19302"]},
-            {"urls": ["stun:stun.services.mozilla.com"]}
-        ]}
-    )
-
-    def video_frame_callback(frame):
-        img = frame.to_ndarray(format="bgr24")
-        # SPEED FIX: imgsz=320 makes CPU inference significantly faster on Cloud
-        results = model.predict(img, conf=conf_threshold, imgsz=320, verbose=False)
-        return av.VideoFrame.from_ndarray(results[0].plot(), format="bgr24")
-
-    webrtc_streamer(
-        key="fire-detection-webcam",
-        mode=WebRtcMode.SENDRECV,
-        rtc_configuration=RTC_CONFIGURATION,
-        video_frame_callback=video_frame_callback,
-        media_stream_constraints={"video": True, "audio": False},
-        async_processing=True,
-    )
+    if cam_image:
+        # Convert the photo to an image the AI understands
+        img = PIL.Image.open(cam_image)
+        img_array = np.array(img)
+        
+        # Run detection
+        results = model.predict(img_array, conf=conf_threshold)
+        
+        # Show results
+        st.image(results[0].plot(), caption="Webcam Detection", use_container_width=True)
