@@ -53,7 +53,7 @@ elif source_mode == "Webcam":
         img_array = np.array(img)
         
         # 2. Run detection (imgsz=320 for speed)
-        results = model.predict(img_array, conf=conf_threshold, imgsz=320)
-        
+        results = model.predict(img_array, conf=0.1, verbose=True)
         # 3. Show the result
         st.image(results[0].plot(), caption="Detection Result", use_container_width=True)
+
