@@ -43,23 +43,18 @@ elif source_mode == "Video":
         vf.release()
 
 
-if source_mode == "Webcam":
-    st.warning("If it stays 'Loading', your network is blocking the video. Try using your phone's mobile data hotspot.")
+elif source_mode == "Webcam":
+    st.info("Take a photo to run the detection.")
+    # This opens your laptop camera automatically on the cloud
+    cam_image = st.camera_input("Detect Fire/Smoke from Webcam")
     
-    # We use a simple STUN server and a new key to reset the connection
-    RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
-
-    def callback(frame):
-        img = frame.to_ndarray(format="bgr24")
-        # Super-fast inference size to prevent lag
-        results = model.predict(img, conf=conf_threshold, imgsz=256, verbose=False)
-        return av.VideoFrame.from_ndarray(results[0].plot(), format="bgr24")
-
-    webrtc_streamer(
-        key="fire-webcam-final-try", # Changed key
-        mode=WebRtcMode.SENDRECV,
-        rtc_configuration=RTC_CONFIG,
-        video_frame_callback=callback,
-        media_stream_constraints={"video": True, "audio": False},
-        async_processing=True,
-    )
+    if cam_image:
+        # Convert the photo to an image the AI understands
+        img = PIL.Image.open(cam_image)
+        img_array = np.array(img)
+        
+        # Run detection
+        results = model.predict(img_array, conf=conf_threshold)
+        
+        # Show results
+        st.image(results[0].plot(), caption="Webcam Detection", use_container_width=True)
