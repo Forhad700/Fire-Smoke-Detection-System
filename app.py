@@ -44,30 +44,30 @@ elif source_mode == "Video":
             st_frame.image(results[0].plot(), channels="BGR", use_container_width=True)
         vf.release()
 
-# --- WEBCAM SECTION (FIXED FOR CLOUD) ---
+# --- WEBCAM SECTION (UPDATED FOR BETTER CONNECTIVITY) ---
 elif source_mode == "Webcam":
     st.info("The camera will open below. Use the 'START' button.")
 
-    # This configuration is required for cloud deployment to bypass firewalls
+    # Multi-server configuration to bypass strict firewalls
     RTC_CONFIGURATION = RTCConfiguration(
-        {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+        {"iceServers": [
+            {"urls": ["stun:stun.l.google.com:19302"]},
+            {"urls": ["stun:stun1.l.google.com:19302"]},
+            {"urls": ["stun:stun2.l.google.com:19302"]},
+            {"urls": ["stun:stun.services.mozilla.com"]}
+        ]}
     )
 
-    # This function processes each camera frame for the AI
     def video_frame_callback(frame):
         img = frame.to_ndarray(format="bgr24")
-        
-        # Performance tip: imgsz=320 makes it run much faster on the cloud
+        # Keep imgsz=320 for the best speed on Cloud
         results = model.predict(img, conf=conf_threshold, imgsz=320, verbose=False)
-        
-        annotated_frame = results[0].plot()
-        return av.VideoFrame.from_ndarray(annotated_frame, format="bgr24")
+        return av.VideoFrame.from_ndarray(results[0].plot(), format="bgr24")
 
     webrtc_streamer(
         key="fire-smoke-detection",
         mode=WebRtcMode.SENDRECV,
         rtc_configuration=RTC_CONFIGURATION,
-        video_frame_callback=video_frame_callback,
         media_stream_constraints={"video": True, "audio": False},
         async_processing=True,
     )
