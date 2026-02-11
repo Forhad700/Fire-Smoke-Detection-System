@@ -31,27 +31,33 @@ elif source_mode == "Video":
         tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(uploaded_video.read())
         
-        if st.button("Start Real-Time Analysis"):
+        # Start button to prevent auto-running
+        if st.button("🚀 Fast Analysis"):
             vf = cv2.VideoCapture(tfile.name)
-            st_frame = st.empty() # This is the key for smooth updates
+            st_frame = st.empty()
+            
+            # --- THE SPEED TWEAKS ---
+            # Increase this number (e.g., 10 or 15) to make it even faster
+            SKIP_FRAMES = 10 
+            count = 0
             
             while vf.isOpened():
                 ret, frame = vf.read()
-                if not ret:
-                    break
+                if not ret: break
                 
-                # Use a very small image size (256 or 320) to force speed
-                results = model.predict(frame, conf=conf_threshold, imgsz=256, verbose=False)
+                # Only process one out of every 10 frames
+                if count % SKIP_FRAMES == 0:
+                    # imgsz=160 is TINY and UGLY, but it is the FASTEST possible
+                    results = model.predict(frame, conf=conf_threshold, imgsz=160, verbose=False)
+                    
+                    # Display result
+                    res_plotted = results[0].plot()
+                    st_frame.image(res_plotted, channels="BGR", use_container_width=True)
                 
-                # Plot and convert BGR to RGB for Streamlit
-                res_plotted = results[0].plot()
-                rgb_frame = cv2.cvtColor(res_plotted, cv2.COLOR_BGR2RGB)
-                
-                # Update the SAME frame placeholder over and over
-                st_frame.image(rgb_frame, use_container_width=True)
+                count += 1
             
             vf.release()
-            st.success("Video processing finished!")
+            st.success("Done!")
 
 
 elif source_mode == "Webcam":
@@ -65,6 +71,7 @@ elif source_mode == "Webcam":
         st_frame.image(results[0].plot(), channels="BGR", use_container_width=True)
 
     cap.release()
+
 
 
 
