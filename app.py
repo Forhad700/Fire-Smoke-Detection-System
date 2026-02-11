@@ -43,23 +43,23 @@ elif source_mode == "Video":
         vf.release()
 
 
-elif source_mode == "Webcam":
-    st.info("Click START below to open your local camera.")
+if source_mode == "Webcam":
+    st.warning("If it stays 'Loading', your network is blocking the video. Try using your phone's mobile data hotspot.")
     
-    # This tells the browser how to find the server
+    # We use a simple STUN server and a new key to reset the connection
     RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
 
-    def video_frame_callback(frame):
+    def callback(frame):
         img = frame.to_ndarray(format="bgr24")
-        # Optimization: imgsz=320 makes the cloud CPU keep up with the video
-        results = model.predict(img, conf=conf_threshold, imgsz=320, verbose=False)
+        # Super-fast inference size to prevent lag
+        results = model.predict(img, conf=conf_threshold, imgsz=256, verbose=False)
         return av.VideoFrame.from_ndarray(results[0].plot(), format="bgr24")
 
     webrtc_streamer(
-        key="fire-detection",
+        key="fire-webcam-final-try", # Changed key
         mode=WebRtcMode.SENDRECV,
         rtc_configuration=RTC_CONFIG,
-        video_frame_callback=video_frame_callback,
+        video_frame_callback=callback,
         media_stream_constraints={"video": True, "audio": False},
-        async_processing=True, # This prevents the "slow motion" buildup
+        async_processing=True,
     )
