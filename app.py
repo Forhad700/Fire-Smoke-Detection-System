@@ -30,11 +30,20 @@ elif source_mode == "Video":
         tfile.write(uploaded_video.read())
         vf = cv2.VideoCapture(tfile.name)
         st_frame = st.empty()
+        
+        frame_count = 0
         while vf.isOpened():
             ret, frame = vf.read()
             if not ret: break
-            results = model.predict(frame, conf=conf_threshold)
-            st_frame.image(results[0].plot(), channels="BGR", use_container_width=True)
+            
+            # SPEED BOOST: Only process every 3rd frame
+            if frame_count % 3 == 0:
+                # imgsz=320 makes the math way faster on CPU
+                results = model.predict(frame, conf=conf_threshold, imgsz=320)
+                plotted_frame = results[0].plot()
+                st_frame.image(plotted_frame, channels="BGR", use_container_width=True)
+            
+            frame_count += 1
         vf.release()
 
 
@@ -47,4 +56,5 @@ elif source_mode == "Webcam":
         if not ret: break
         results = model.predict(frame, conf=conf_threshold)
         st_frame.image(results[0].plot(), channels="BGR", use_container_width=True)
+
     cap.release()
