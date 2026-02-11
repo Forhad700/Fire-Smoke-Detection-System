@@ -45,24 +45,30 @@ elif source_mode == "Video":
 elif source_mode == "Webcam":
     st.info("Click 'START' to begin real-time detection.")
     
-    # This function runs automatically for every camera frame
+    # Stable RTC configuration
+    RTC_CONFIG = RTCConfiguration(
+        {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+    )
+
     def video_frame_callback(frame):
+        # Convert frame to numpy array
         img = frame.to_ndarray(format="bgr24")
         
-        # imgsz=320 makes it 4x faster so there is no delay
+        # Run detection
+        # We use a smaller imgsz for the CPU to handle the "Live" stream
         results = model.predict(img, conf=conf_threshold, imgsz=320, verbose=False)
         
+        # Plot the results on the frame
         annotated_frame = results[0].plot()
+        
         return av.VideoFrame.from_ndarray(annotated_frame, format="bgr24")
 
-    # The 'webrtc_streamer' creates the "Running" camera effect
+    # Use a unique key and simplified parameters to avoid the AttributeError
     webrtc_streamer(
-        key="fire-detection-live",
+        key="fire-detection-v2",
         mode=WebRtcMode.SENDRECV,
-        rtc_configuration={
-            "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
-        },
+        rtc_configuration=RTC_CONFIG,
         video_frame_callback=video_frame_callback,
         media_stream_constraints={"video": True, "audio": False},
-        async_processing=True, # Keeps the video moving even if AI is a bit slow
+        async_processing=True,
     )
