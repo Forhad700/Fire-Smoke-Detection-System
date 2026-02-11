@@ -43,30 +43,10 @@ elif source_mode == "Video":
 
 
 elif source_mode == "Webcam":
-    st.info("Direct Webcam Mode: Detections will appear live.")
-    
-    # RTC configuration to help traverse firewalls that cause timeouts
-    RTC_CONFIG = RTCConfiguration(
-        {"iceServers": [{"urls": ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"]}]}
-    )
-
-    class VideoProcessor:
-        def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
-            img = frame.to_ndarray(format="bgr24")
-            
-            # Use small imgsz (320) for smoother 'direct' feel on cloud CPU
-            results = model.predict(img, conf=conf_threshold, imgsz=320, verbose=False)
-            
-            # Get the frame with detection boxes
-            annotated_image = results[0].plot()
-            
-            return av.VideoFrame.from_ndarray(annotated_image, format="bgr24")
-
-    webrtc_streamer(
-        key="fire-direct-webcam",
-        mode=WebRtcMode.SENDRECV,
-        rtc_configuration=RTC_CONFIG,
-        video_processor_factory=VideoProcessor,
-        media_stream_constraints={"video": True, "audio": False},
-        async_processing=True, # Critical for keeping the 'running' feel
-    )
+    st.info("Take a photo to start detection. Streamlit will process it automatically.")
+    img_file = st.camera_input("Webcam Feed")
+    if img_file:
+        img = PIL.Image.open(img_file)
+        img_array = np.array(img)
+        results = model.predict(img_array, conf=0.1, verbose=True)
+        st.image(results[0].plot(), caption="Detection Result", use_container_width=True)
