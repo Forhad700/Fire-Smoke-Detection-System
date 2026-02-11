@@ -4,7 +4,8 @@ import cv2
 import PIL.Image
 import numpy as np
 import tempfile
-from camera_input_live import camera_input_live
+from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
+import av
 
 
 st.set_page_config(page_title="Fire Smoke Detector 🔥", layout="wide")
@@ -43,18 +44,22 @@ elif source_mode == "Video":
 
 
 elif source_mode == "Webcam":
-    st.info("Point camera at fire/smoke source. Detection updates every 0.5s.")
+    st.info("Click START below to open your local camera.")
     
-    # --- THE SPEED FIX ---
-    # debounce=500 means "wait 500ms before sending the next frame"
-    # This prevents the Cloud CPU from crashing/lagging.
-    image = camera_input_live(debounce=500, show_controls=False)
-    
-    if image:
-        img = PIL.Image.open(image)
-        img_array = np.array(img)
-        
-        # imgsz=160 or 320 makes the AI math 4-8 times faster on CPU
-        results = model.predict(img_array, conf=conf_threshold, imgsz=256, verbose=False)
-        
-        st.image(results[0].plot(), caption="Live Cloud Detection", use_container_width=True)
+    # This tells the browser how to find the server
+    RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
+
+    def video_frame_callback(frame):
+        img = frame.to_ndarray(format="bgr24")
+        # Optimization: imgsz=320 makes the cloud CPU keep up with the video
+        results = model.predict(img, conf=conf_threshold, imgsz=320, verbose=False)
+        return av.VideoFrame.from_ndarray(results[0].plot(), format="bgr24")
+
+    webrtc_streamer(
+        key="fire-detection",
+        mode=WebRtcMode.SENDRECV,
+        rtc_configuration=RTC_CONFIG,
+        video_frame_callback=video_frame_callback,
+        media_stream_constraints={"video": True, "audio": False},
+        async_processing=True, # This prevents the "slow motion" buildup
+    )
