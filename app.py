@@ -26,36 +26,32 @@ if source_mode == "Image":
 
 elif source_mode == "Video":
     uploaded_video = st.file_uploader("Upload Video", type=['mp4', 'mov', 'avi'])
+    
     if uploaded_video:
-        tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+        tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(uploaded_video.read())
-        output_path = "processed_video.mp4"
-        if st.button("Start Analysis"):
+        
+        if st.button("Start Real-Time Analysis"):
             vf = cv2.VideoCapture(tfile.name)
-            width = int(vf.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(vf.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            fps = int(vf.get(cv2.CAP_PROP_FPS))
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            total_frames = int(vf.get(cv2.CAP_PROP_FRAME_COUNT))
-            frame_count = 0
+            st_frame = st.empty() # This is the key for smooth updates
+            
             while vf.isOpened():
                 ret, frame = vf.read()
                 if not ret:
                     break
-                results = model.predict(frame, conf=conf_threshold, imgsz=320, verbose=False)
-                out.write(results[0].plot())
-                frame_count += 1
-                progress_bar.progress(frame_count / total_frames)
-                status_text.text(f"Processing frame {frame_count}/{total_frames}...")
+                
+                # Use a very small image size (256 or 320) to force speed
+                results = model.predict(frame, conf=conf_threshold, imgsz=256, verbose=False)
+                
+                # Plot and convert BGR to RGB for Streamlit
+                res_plotted = results[0].plot()
+                rgb_frame = cv2.cvtColor(res_plotted, cv2.COLOR_BGR2RGB)
+                
+                # Update the SAME frame placeholder over and over
+                st_frame.image(rgb_frame, use_container_width=True)
+            
             vf.release()
-            out.release()
-            st.success("Analysis Complete! Viewing smooth playback below:")
-            video_file = open(output_path, 'rb')
-            video_bytes = video_file.read()
-            st.video(video_bytes)
+            st.success("Video processing finished!")
 
 
 elif source_mode == "Webcam":
@@ -69,5 +65,6 @@ elif source_mode == "Webcam":
         st_frame.image(results[0].plot(), channels="BGR", use_container_width=True)
 
     cap.release()
+
 
 
