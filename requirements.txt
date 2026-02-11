@@ -3,7 +3,3 @@ streamlit
 opencv-python-headless
 pillow
 numpy
-streamlit-webrtc
-av
-streamlit-camera-input-live
-
