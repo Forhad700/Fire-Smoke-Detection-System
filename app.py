@@ -4,6 +4,7 @@ import cv2
 import PIL.Image
 import numpy as np
 import tempfile
+from camera_input_live import camera_input_live
 
 
 st.set_page_config(page_title="Fire Smoke Detector 🔥", layout="wide")
@@ -42,17 +43,18 @@ elif source_mode == "Video":
 
 
 elif source_mode == "Webcam":
-    st.info("Take a photo to run the detection.")
-    # This opens your laptop camera automatically on the cloud
-    cam_image = st.camera_input("Detect Fire/Smoke from Webcam")
+    st.info("Live stream active. Point camera at fire/smoke source.")
     
-    if cam_image:
-        # Convert the photo to an image the AI understands
-        img = PIL.Image.open(cam_image)
+    # This component captures a frame every few milliseconds automatically
+    image = camera_input_live(show_controls=False)
+    
+    if image:
+        # Convert bytes to an image for YOLO
+        img = PIL.Image.open(image)
         img_array = np.array(img)
         
-        # Run detection
-        results = model.predict(img_array, conf=conf_threshold)
+        # Run detection (imgsz=320 makes it fast enough for a live web stream)
+        results = model.predict(img_array, conf=conf_threshold, imgsz=320, verbose=False)
         
-        # Show results
-        st.image(results[0].plot(), caption="Webcam Detection", use_container_width=True)
+        # Display the detection
+        st.image(results[0].plot(), caption="Live Detection", use_container_width=True)
