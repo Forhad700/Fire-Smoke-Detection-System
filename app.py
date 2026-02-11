@@ -4,6 +4,7 @@ import cv2
 import PIL.Image
 import numpy as np
 import tempfile
+import os
 
 
 st.set_page_config(page_title="Fire Smoke Detector 🔥", layout="wide")
@@ -26,24 +27,35 @@ if source_mode == "Image":
 elif source_mode == "Video":
     uploaded_video = st.file_uploader("Upload Video", type=['mp4', 'mov', 'avi'])
     if uploaded_video:
-        tfile = tempfile.NamedTemporaryFile(delete=False)
-        tfile.write(uploaded_video.read()) 
-        vf = cv2.VideoCapture(tfile.name)
-        st_frame = st.empty()
-        frame_skip = 3  
-        count = 0
-        
-        while vf.isOpened():
-            ret, frame = vf.read()
-            if not ret:
-                break
-            if count % frame_skip == 0:
+        tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+        tfile.write(uploaded_video.read())
+        output_path = "processed_video.mp4"
+        if st.button("Start Analysis"):
+            vf = cv2.VideoCapture(tfile.name)
+            width = int(vf.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(vf.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps = int(vf.get(cv2.CAP_PROP_FPS))
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            total_frames = int(vf.get(cv2.CAP_PROP_FRAME_COUNT))
+            frame_count = 0
+            while vf.isOpened():
+                ret, frame = vf.read()
+                if not ret:
+                    break
                 results = model.predict(frame, conf=conf_threshold, imgsz=320, verbose=False)
-                res_plotted = results[0].plot()
-                st_frame.image(res_plotted, channels="BGR", use_container_width=True)     
-            count += 1
-        vf.release()
-        st.success("Analysis complete!")
+                out.write(results[0].plot())
+                frame_count += 1
+                progress_bar.progress(frame_count / total_frames)
+                status_text.text(f"Processing frame {frame_count}/{total_frames}...")
+            vf.release()
+            out.release()
+            st.success("Analysis Complete! Viewing smooth playback below:")
+            video_file = open(output_path, 'rb')
+            video_bytes = video_file.read()
+            st.video(video_bytes)
 
 
 elif source_mode == "Webcam":
@@ -57,4 +69,5 @@ elif source_mode == "Webcam":
         st_frame.image(results[0].plot(), channels="BGR", use_container_width=True)
 
     cap.release()
+
 
