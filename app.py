@@ -43,32 +43,30 @@ elif source_mode == "Video":
 
 
 elif source_mode == "Webcam":
-    st.info("Click 'START' to begin real-time detection.")
+    st.info("Direct Webcam Mode: Detections will appear live.")
     
-    # Stable RTC configuration
+    # RTC configuration to help traverse firewalls that cause timeouts
     RTC_CONFIG = RTCConfiguration(
-        {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+        {"iceServers": [{"urls": ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"]}]}
     )
 
-    def video_frame_callback(frame):
-        # Convert frame to numpy array
-        img = frame.to_ndarray(format="bgr24")
-        
-        # Run detection
-        # We use a smaller imgsz for the CPU to handle the "Live" stream
-        results = model.predict(img, conf=conf_threshold, imgsz=320, verbose=False)
-        
-        # Plot the results on the frame
-        annotated_frame = results[0].plot()
-        
-        return av.VideoFrame.from_ndarray(annotated_frame, format="bgr24")
+    class VideoProcessor:
+        def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
+            img = frame.to_ndarray(format="bgr24")
+            
+            # Use small imgsz (320) for smoother 'direct' feel on cloud CPU
+            results = model.predict(img, conf=conf_threshold, imgsz=320, verbose=False)
+            
+            # Get the frame with detection boxes
+            annotated_image = results[0].plot()
+            
+            return av.VideoFrame.from_ndarray(annotated_image, format="bgr24")
 
-    # Use a unique key and simplified parameters to avoid the AttributeError
     webrtc_streamer(
-        key="fire-detection-v2",
+        key="fire-direct-webcam",
         mode=WebRtcMode.SENDRECV,
         rtc_configuration=RTC_CONFIG,
-        video_frame_callback=video_frame_callback,
+        video_processor_factory=VideoProcessor,
         media_stream_constraints={"video": True, "audio": False},
-        async_processing=True,
+        async_processing=True, # Critical for keeping the 'running' feel
     )
