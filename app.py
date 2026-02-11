@@ -42,32 +42,18 @@ elif source_mode == "Video":
 
 
 elif source_mode == "Webcam":
-    st.info("Continuous Detection: Click the button to start/stop.")
+    st.info("Take a photo to start detection. Streamlit will process it automatically.")
     
-    # This is the secret for cloud speed: st.camera_input + a loop
-    # It works instantly because it uses your browser's native power.
-    run = st.toggle("Start Real-Time Detection")
-    FRAME_WINDOW = st.empty()
-
-    while run:
-        # Use Streamlit's native camera for zero-setup cloud access
-        img_file = st.camera_input("Detecting...", label_visibility="collapsed")
+    # Place the widget OUTSIDE of any loops
+    img_file = st.camera_input("Webcam Feed")
+    
+    if img_file:
+        # 1. Convert captured photo to AI format
+        img = PIL.Image.open(img_file)
+        img_array = np.array(img)
         
-        if img_file:
-            # Convert to format YOLO understands
-            img = PIL.Image.open(img_file)
-            img_array = np.array(img)
-            
-            # --- TURBO SPEED SETTINGS ---
-            # imgsz=256 is the "Sweet Spot": 4x faster than default.
-            # stream=True uses less memory to prevent cloud crashes.
-            results = model.predict(img_array, conf=conf_threshold, imgsz=256, stream=True)
-            
-            for r in results:
-                annotated_frame = r.plot()
-                # Display the processed frame
-                FRAME_WINDOW.image(annotated_frame, channels="BGR", use_container_width=True)
+        # 2. Run detection (imgsz=320 for speed)
+        results = model.predict(img_array, conf=conf_threshold, imgsz=320)
         
-        # Stops the loop if the toggle is turned off
-        if not run:
-            break
+        # 3. Show the result
+        st.image(results[0].plot(), caption="Detection Result", use_container_width=True)
