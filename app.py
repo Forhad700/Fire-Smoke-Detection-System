@@ -4,8 +4,6 @@ import cv2
 import PIL.Image
 import numpy as np
 import tempfile
-from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
-import av
 
 
 st.set_page_config(page_title="Fire Smoke Detector 🔥", layout="wide")
@@ -44,17 +42,32 @@ elif source_mode == "Video":
 
 
 elif source_mode == "Webcam":
-    st.info("Take a photo to run the detection.")
-    # This opens your laptop camera automatically on the cloud
-    cam_image = st.camera_input("Detect Fire/Smoke from Webcam")
+    st.info("Continuous Detection: Click the button to start/stop.")
     
-    if cam_image:
-        # Convert the photo to an image the AI understands
-        img = PIL.Image.open(cam_image)
-        img_array = np.array(img)
+    # This is the secret for cloud speed: st.camera_input + a loop
+    # It works instantly because it uses your browser's native power.
+    run = st.toggle("Start Real-Time Detection")
+    FRAME_WINDOW = st.empty()
+
+    while run:
+        # Use Streamlit's native camera for zero-setup cloud access
+        img_file = st.camera_input("Detecting...", label_visibility="collapsed")
         
-        # Run detection
-        results = model.predict(img_array, conf=conf_threshold)
+        if img_file:
+            # Convert to format YOLO understands
+            img = PIL.Image.open(img_file)
+            img_array = np.array(img)
+            
+            # --- TURBO SPEED SETTINGS ---
+            # imgsz=256 is the "Sweet Spot": 4x faster than default.
+            # stream=True uses less memory to prevent cloud crashes.
+            results = model.predict(img_array, conf=conf_threshold, imgsz=256, stream=True)
+            
+            for r in results:
+                annotated_frame = r.plot()
+                # Display the processed frame
+                FRAME_WINDOW.image(annotated_frame, channels="BGR", use_container_width=True)
         
-        # Show results
-        st.image(results[0].plot(), caption="Webcam Detection", use_container_width=True)
+        # Stops the loop if the toggle is turned off
+        if not run:
+            break
