@@ -27,24 +27,23 @@ elif source_mode == "Video":
     uploaded_video = st.file_uploader("Upload Video", type=['mp4', 'mov', 'avi'])
     if uploaded_video:
         tfile = tempfile.NamedTemporaryFile(delete=False)
-        tfile.write(uploaded_video.read())
+        tfile.write(uploaded_video.read()) 
         vf = cv2.VideoCapture(tfile.name)
         st_frame = st.empty()
+        frame_skip = 3  
+        count = 0
         
-        frame_count = 0
         while vf.isOpened():
             ret, frame = vf.read()
-            if not ret: break
-            
-            # SPEED BOOST: Only process every 3rd frame
-            if frame_count % 3 == 0:
-                # imgsz=320 makes the math way faster on CPU
-                results = model.predict(frame, conf=conf_threshold, imgsz=320)
-                plotted_frame = results[0].plot()
-                st_frame.image(plotted_frame, channels="BGR", use_container_width=True)
-            
-            frame_count += 1
+            if not ret:
+                break
+            if count % frame_skip == 0:
+                results = model.predict(frame, conf=conf_threshold, imgsz=320, verbose=False)
+                res_plotted = results[0].plot()
+                st_frame.image(res_plotted, channels="BGR", use_container_width=True)     
+            count += 1
         vf.release()
+        st.success("Analysis complete!")
 
 
 elif source_mode == "Webcam":
@@ -58,3 +57,4 @@ elif source_mode == "Webcam":
         st_frame.image(results[0].plot(), channels="BGR", use_container_width=True)
 
     cap.release()
+
