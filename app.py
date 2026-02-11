@@ -28,36 +28,49 @@ elif source_mode == "Video":
     uploaded_video = st.file_uploader("Upload Video", type=['mp4', 'mov', 'avi'])
     
     if uploaded_video:
+        # Save file
         tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(uploaded_video.read())
         
-        # Start button to prevent auto-running
-        if st.button("🚀 Fast Analysis"):
+        st.info("Because this is running on a free CPU, full analysis takes time. Try 'Quick Preview' first!")
+        
+        col1, col2 = st.columns(2)
+        
+        # OPTION 1: QUICK PREVIEW
+        if col1.button("🔍 Quick Preview (10 Frames)"):
             vf = cv2.VideoCapture(tfile.name)
             st_frame = st.empty()
+            for i in range(10): # Only do 10 frames total
+                ret, frame = vf.read()
+                if not ret: break
+                results = model.predict(frame, conf=conf_threshold, imgsz=256)
+                st_frame.image(results[0].plot(), channels="BGR", use_container_width=True)
+            vf.release()
+            st.success("Preview Complete!")
+
+        # OPTION 2: FULL ANALYSIS (With Progress Bar)
+        if col2.button("🚀 Full Analysis (Slow)"):
+            vf = cv2.VideoCapture(tfile.name)
+            st_frame = st.empty()
+            progress = st.progress(0)
             
-            # --- THE SPEED TWEAKS ---
-            # Increase this number (e.g., 10 or 15) to make it even faster
-            SKIP_FRAMES = 10 
+            total_frames = int(vf.get(cv2.CAP_PROP_FRAME_COUNT))
             count = 0
             
             while vf.isOpened():
                 ret, frame = vf.read()
                 if not ret: break
                 
-                # Only process one out of every 10 frames
-                if count % SKIP_FRAMES == 0:
-                    # imgsz=160 is TINY and UGLY, but it is the FASTEST possible
-                    results = model.predict(frame, conf=conf_threshold, imgsz=160, verbose=False)
-                    
-                    # Display result
-                    res_plotted = results[0].plot()
-                    st_frame.image(res_plotted, channels="BGR", use_container_width=True)
+                # Only process every 10th frame to keep it from hanging
+                if count % 10 == 0:
+                    results = model.predict(frame, conf=conf_threshold, imgsz=256, verbose=False)
+                    st_frame.image(results[0].plot(), channels="BGR", use_container_width=True)
                 
                 count += 1
+                progress.progress(min(count/total_frames, 1.0))
             
             vf.release()
-            st.success("Done!")
+            st.success("Analysis Complete!")
 
 
 elif source_mode == "Webcam":
@@ -71,6 +84,7 @@ elif source_mode == "Webcam":
         st_frame.image(results[0].plot(), channels="BGR", use_container_width=True)
 
     cap.release()
+
 
 
 
