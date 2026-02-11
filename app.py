@@ -5,13 +5,11 @@ import PIL.Image
 import numpy as np
 import tempfile
 
+
 st.set_page_config(page_title="Fire Smoke Detector 🔥", layout="wide")
 st.title("🔥 Fire & Smoke Detection System")
 
-@st.cache_resource
-def load_model():
-    return YOLO('best.pt')
-model = load_model()
+model = YOLO('best.pt')
 
 source_mode = st.sidebar.radio("Select Source:", ["Image", "Video", "Webcam"])
 conf_threshold = st.sidebar.slider("Confidence", 0.1, 1.0, 0.4)
@@ -41,11 +39,12 @@ elif source_mode == "Video":
 
 
 elif source_mode == "Webcam":
-    st.info("Take a photo to start detection. Streamlit will process it automatically.")
-    img_file = st.camera_input("Webcam Feed")
-    if img_file:
-        img = PIL.Image.open(img_file)
-        img_array = np.array(img)
-        results = model.predict(img_array, conf=0.1, verbose=True)
-        st.image(results[0].plot(), caption="Detection Result", use_container_width=True)
-
+    st.info("Click 'Stop' at Top Right to Turn Off Camera.")
+    cap = cv2.VideoCapture(0) 
+    st_frame = st.empty()
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret: break
+        results = model.predict(frame, conf=conf_threshold)
+        st_frame.image(results[0].plot(), channels="BGR", use_container_width=True)
+    cap.release()
