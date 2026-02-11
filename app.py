@@ -4,7 +4,8 @@ import cv2
 import PIL.Image
 import numpy as np
 import tempfile
-
+from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
+import av
 
 st.set_page_config(page_title="Fire Smoke Detector 🔥", layout="wide")
 st.title("🔥 Fire & Smoke Detection System")
@@ -42,18 +43,26 @@ elif source_mode == "Video":
 
 
 elif source_mode == "Webcam":
-    st.info("Take a photo to start detection. Streamlit will process it automatically.")
+    st.info("Click 'START' to begin real-time detection.")
     
-    # Place the widget OUTSIDE of any loops
-    img_file = st.camera_input("Webcam Feed")
-    
-    if img_file:
-        # 1. Convert captured photo to AI format
-        img = PIL.Image.open(img_file)
-        img_array = np.array(img)
+    # This function runs automatically for every camera frame
+    def video_frame_callback(frame):
+        img = frame.to_ndarray(format="bgr24")
         
-        # 2. Run detection (imgsz=320 for speed)
-        results = model.predict(img_array, conf=0.1, verbose=True)
-        # 3. Show the result
-        st.image(results[0].plot(), caption="Detection Result", use_container_width=True)
+        # imgsz=320 makes it 4x faster so there is no delay
+        results = model.predict(img, conf=conf_threshold, imgsz=320, verbose=False)
+        
+        annotated_frame = results[0].plot()
+        return av.VideoFrame.from_ndarray(annotated_frame, format="bgr24")
 
+    # The 'webrtc_streamer' creates the "Running" camera effect
+    webrtc_streamer(
+        key="fire-detection-live",
+        mode=WebRtcMode.SENDRECV,
+        rtc_configuration={
+            "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+        },
+        video_frame_callback=video_frame_callback,
+        media_stream_constraints={"video": True, "audio": False},
+        async_processing=True, # Keeps the video moving even if AI is a bit slow
+    )
