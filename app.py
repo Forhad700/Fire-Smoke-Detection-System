@@ -43,18 +43,18 @@ elif source_mode == "Video":
 
 
 elif source_mode == "Webcam":
-    st.info("Live stream active. Point camera at fire/smoke source.")
+    st.info("Point camera at fire/smoke source. Detection updates every 0.5s.")
     
-    # This component captures a frame every few milliseconds automatically
-    image = camera_input_live(show_controls=False)
+    # --- THE SPEED FIX ---
+    # debounce=500 means "wait 500ms before sending the next frame"
+    # This prevents the Cloud CPU from crashing/lagging.
+    image = camera_input_live(debounce=500, show_controls=False)
     
     if image:
-        # Convert bytes to an image for YOLO
         img = PIL.Image.open(image)
         img_array = np.array(img)
         
-        # Run detection (imgsz=320 makes it fast enough for a live web stream)
-        results = model.predict(img_array, conf=conf_threshold, imgsz=320, verbose=False)
+        # imgsz=160 or 320 makes the AI math 4-8 times faster on CPU
+        results = model.predict(img_array, conf=conf_threshold, imgsz=256, verbose=False)
         
-        # Display the detection
-        st.image(results[0].plot(), caption="Live Detection", use_container_width=True)
+        st.image(results[0].plot(), caption="Live Cloud Detection", use_container_width=True)
