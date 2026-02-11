@@ -4,8 +4,6 @@ import cv2
 import PIL.Image
 import numpy as np
 import tempfile
-from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
-import av
 
 st.set_page_config(page_title="Fire Smoke Detector 🔥", layout="wide")
 st.title("🔥 Fire & Smoke Detection System")
@@ -50,3 +48,4 @@ elif source_mode == "Webcam":
         img_array = np.array(img)
         results = model.predict(img_array, conf=0.1, verbose=True)
         st.image(results[0].plot(), caption="Detection Result", use_container_width=True)
+
