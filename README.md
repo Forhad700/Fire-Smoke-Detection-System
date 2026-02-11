@@ -1,1 +1,1 @@
-# Fire-Smoke-Detection-System
+# Fire Smoke Detection System
