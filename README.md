@@ -13,8 +13,8 @@ A high-performance, real-time Computer Vision system developed to detect fire an
 
 ## Tech Stack
 - **Core** — Python, PyTorch
-- **Model** — YOLOv8 (Ultralytics)
 - **Computer Vision** — OpenCV
+- **Model** — YOLOv8 (Ultralytics)
 - **Matplotlib** — Data visualization.
 - **Deployment** — Streamlit, WebRTC
 - **Frontend** — Streamlit (Reactive Web UI)
