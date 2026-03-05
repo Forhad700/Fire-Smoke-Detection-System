@@ -9,11 +9,7 @@ import tempfile
 st.set_page_config(page_title="Fire Smoke Detector 🔥", layout="wide")
 st.title("🔥 Fire & Smoke Detection System")
 
-@st.cache_resource
-def load_model():
-    return YOLO("best.pt")
-
-model = load_model()
+model = YOLO('best.pt')
 
 source_mode = st.sidebar.radio("Select Source:", ["Image", "Video", "Webcam"])
 conf_threshold = st.sidebar.slider("Confidence", 0.1, 1.0, 0.4)
@@ -71,4 +67,5 @@ elif source_mode == "Webcam":
         img_array = np.array(img)
         results = model.predict(img_array, conf=0.1, verbose=True)
         st.image(results[0].plot(), caption="Detection Result", use_container_width=True)
+
 
