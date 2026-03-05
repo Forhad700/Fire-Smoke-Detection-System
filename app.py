@@ -67,5 +67,3 @@ elif source_mode == "Webcam":
         img_array = np.array(img)
         results = model.predict(img_array, conf=0.1, verbose=True)
         st.image(results[0].plot(), caption="Detection Result", use_container_width=True)
-
-
