@@ -1,5 +1,10 @@
-ultralytics==8.4.14
+numpy==2.4.2
+opencv-python==4.13.0.92
+opencv-python-headless==4.13.0.92
+pandas==2.3.3
+pillow==12.1.1
 streamlit==1.54.0
-opencv-python-headless
-pillow
-numpy
+typing_extensions
+ultralytics==8.4.14
+ultralytics-thop==2.0.18
+urllib3
